@@ -1,6 +1,10 @@
+# Use the base image
 FROM ubuntu:jammy
+
+# Set maintainer information
 MAINTAINER Odoo S.A. <info@odoo.com>
 
+# Set shell options
 SHELL ["/bin/bash", "-xo", "pipefail", "-c"]
 
 # Generate locale C.UTF-8 for postgres and general locale data
@@ -10,7 +14,6 @@ ENV LANG en_US.UTF-8
 ARG TARGETARCH
 
 # Install some deps, lessc and less-plugin-clean-css, and wkhtmltopdf
-
 RUN apt-get update && \
     DEBIAN_FRONTEND=noninteractive \
     apt-get install -y --no-install-recommends \
@@ -37,7 +40,8 @@ RUN apt-get update && \
         python3-watchdog \
         python3-xlrd \
         python3-xlwt \
-        xz-utils && \
+        xz-utils \
+        git && \
     if [ -z "${TARGETARCH}" ]; then \
         TARGETARCH="$(dpkg --print-architecture)"; \
     fi; \
@@ -52,7 +56,7 @@ RUN apt-get update && \
     && apt-get install -y --no-install-recommends ./wkhtmltox.deb \
     && rm -rf /var/lib/apt/lists/* wkhtmltox.deb
 
-# install latest postgresql-client
+# Install latest postgresql-client
 RUN echo 'deb http://apt.postgresql.org/pub/repos/apt/ jammy-pgdg main' > /etc/apt/sources.list.d/pgdg.list \
     && GNUPGHOME="$(mktemp -d)" \
     && export GNUPGHOME \
@@ -85,20 +89,29 @@ COPY ./odoo.conf /etc/odoo/
 
 # Set permissions and Mount /var/lib/odoo to allow restoring filestore and /mnt/extra-addons for users addons
 RUN chown odoo /etc/odoo/odoo.conf \
-    && mkdir -p /mnt/extra-addons \
-    && chown -R odoo /mnt/extra-addons
+    && mkdir -p /mnt/extra-addons
+
+# Clone the Git repository into /mnt/extra-addons
+RUN git clone https://github.com/dabidsillo/gestion_academica.git /mnt/extra-addons/gestion_academica
+
+# Ensure files and directories belong to 'odoo' user
+RUN chown -R odoo /mnt/extra-addons
+
+# Set volumes for persistent data
 VOLUME ["/var/lib/odoo", "/mnt/extra-addons"]
 
-# Expose Odoo services
+# Expose Odoo services ports
 EXPOSE 8069 8071 8072
 
-# Set the default config file
+# Set Odoo configuration file
 ENV ODOO_RC /etc/odoo/odoo.conf
 
+# Copy wait-for-psql.py script to /usr/local/bin/
 COPY wait-for-psql.py /usr/local/bin/wait-for-psql.py
 
-# Set default user when running the container
+# Set the default user for the container
 USER odoo
 
+# Set the entrypoint and default command
 ENTRYPOINT ["/entrypoint.sh"]
 CMD ["odoo"]
