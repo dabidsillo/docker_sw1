@@ -92,7 +92,7 @@ RUN chown odoo /etc/odoo/odoo.conf \
     && mkdir -p /mnt/extra-addons
 
 # Clone the Git repository into /mnt/extra-addons
-RUN git clone https://github.com/dabidsillo/gestion_academica.git /mnt/extra-addons/gestion_academica
+RUN git clone https://github.com/dabidsillo/gestion_academica.git /mnt/extra-addons
 
 # Ensure files and directories belong to 'odoo' user
 RUN chown -R odoo /mnt/extra-addons
